@@ -33,6 +33,9 @@ module RSpec
         # Callback between retries
         config.add_setting :retry_callback, :default => nil
 
+        # Callback for intermittent tests
+        config.add_setting :intermittent_callback, :default => nil
+
         config.around(:each) do |ex|
           ex.run_with_retry
         end
@@ -122,6 +125,15 @@ module RSpec
 
         example.clear_exception
         ex.run
+
+        if example.exception.nil?
+          # If it's an intermittent test, call the callback
+          if attempts > 0 && RSpec.configuration.intermittent_callback
+            example.example_group_instance.instance_exec(example, &RSpec.configuration.intermittent_callback)
+          end
+
+          break
+        end
 
         self.attempts += 1
 
